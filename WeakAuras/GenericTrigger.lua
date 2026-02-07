@@ -2960,45 +2960,40 @@ do
       local duration = 1 / peace
       local partial = UnitPartialPower("player", EssenceEnum) / 1000
 
-      if (partial == 0) then
-        lastFullValue = now
-      elseif power ~= total then
-        -- UnitPartialPower is a rather poor api, which returns incorrect values
-        -- This almost mirrors what the default ui does, in that the default ui
-        -- starts an animation and only uses UnitPartialPower when that animation's
-        -- progress differs from UnitPartialPower by 0.1
-        -- This here uses a similar logic. We sync whenever partial is 0
-        -- and then estimate based on that. And as long as that
-        -- estimate is within 0.1 of UnitPartialPower we prefer the estimate
-        local estimatedPartial = (now - lastFullValue) / duration
-        estimatedPartial = estimatedPartial - floor(estimatedPartial)
-        if abs(estimatedPartial - partial) < 0.1 then
-          partial = estimatedPartial
+      pcall(function()
+        if (partial == 0) then
+          lastFullValue = now
+        elseif power ~= total then
+          local estimatedPartial = (now - lastFullValue) / duration
+          estimatedPartial = estimatedPartial - floor(estimatedPartial)
+          if abs(estimatedPartial - partial) < 0.1 then
+            partial = estimatedPartial
+          end
         end
-      end
-      for i = 1, 6 do
-        local essence = essenceCache[i]
-        if i > total then
-          essence.duration = nil
-          essence.expirationTime = nil
-          essence.remaining = nil
-          essence.paused = nil
-        elseif power >= i then
-          essence.duration = duration
-          essence.expirationTime = math.huge
-          essence.remaining = 0
-          essence.paused = true
-        elseif power + 1 == i then
-          essence.duration = duration
-          essence.expirationTime = GetTime() + (1 - partial) * duration
-          essence.paused = false
-        else
-          essence.duration = duration
-          essence.expirationTime = GetTime() + (1 - partial) * duration + (i - 1 - power) * duration
-          essence.remaining = duration
-          essence.paused = false
+        for i = 1, 6 do
+          local essence = essenceCache[i]
+          if i > total then
+            essence.duration = nil
+            essence.expirationTime = nil
+            essence.remaining = nil
+            essence.paused = nil
+          elseif power >= i then
+            essence.duration = duration
+            essence.expirationTime = math.huge
+            essence.remaining = 0
+            essence.paused = true
+          elseif power + 1 == i then
+            essence.duration = duration
+            essence.expirationTime = GetTime() + (1 - partial) * duration
+            essence.paused = false
+          else
+            essence.duration = duration
+            essence.expirationTime = GetTime() + (1 - partial) * duration + (i - 1 - power) * duration
+            essence.remaining = duration
+            essence.paused = false
+          end
         end
-      end
+      end)
       lastTime = now
       Private.StopProfileSystem("generictrigger essence")
       Private.ScanEvents("ESSENCE_UPDATE")

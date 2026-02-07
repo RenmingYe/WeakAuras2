@@ -3326,7 +3326,7 @@ Private.event_prototypes = {
         name = "percenthealth",
         display = L["Health (%)"],
         type = "number",
-        init = "total ~= 0 and (value / total) * 100 or nil",
+        init = "(function() local ok, r = pcall(function() return total ~= 0 and (value / total) * 100 or nil end); return ok and r or nil end)()",
         store = true,
         conditionType = "number",
         multiEntry = {
@@ -3339,7 +3339,7 @@ Private.event_prototypes = {
         name = "deficit",
         display = L["Health Deficit"],
         type = "number",
-        init = "total - value",
+        init = "(function() local ok, r = pcall(function() return total - value end); return ok and r or 0 end)()",
         store = true,
         conditionType = "number",
         multiEntry = {
@@ -3812,17 +3812,29 @@ Private.event_prototypes = {
           -- Soul Shards, this mirrors the ShardBar in the wow sources
           table.insert(ret, [[
             local shardModifier = UnitPowerDisplayMod(powerType)
-            local power = UnitPower(unit, powerType, true) / shardModifier
-            local total = math.max(1, UnitPowerMax(unit, powerType, true)) / shardModifier
-            if Private.ExecEnv.GetSpecialization() ~= SPEC_WARLOCK_DESTRUCTION then
-              power = floor(power)
+            local power, total
+            do
+              local rawPower = UnitPower(unit, powerType, true)
+              local rawMax = UnitPowerMax(unit, powerType, true)
+              local ok1, p = pcall(function() return rawPower / shardModifier end)
+              local ok2, t = pcall(function() return math.max(1, rawMax / shardModifier) end)
+              power = ok1 and p or rawPower
+              total = ok2 and t or rawMax
+              if ok1 then
+                local ok3, fp = pcall(function() return floor(power) end)
+                if ok3 and Private.ExecEnv.GetSpecialization() ~= SPEC_WARLOCK_DESTRUCTION then
+                  power = fp
+                end
+              end
             end
           ]])
         elseif powerType == 99 then
           table.insert(ret, ([[
             local power = UnitStagger(unit) or 0
             local scaleStagger = %s
-            local total = math.max(1, UnitHealthMax(unit) * scaleStagger)
+            local rawMax = UnitHealthMax(unit)
+            local ok, t = pcall(function() return math.max(1, rawMax * scaleStagger) end)
+            local total = ok and t or rawMax
           ]]):format(trigger.use_scaleStagger and trigger.scaleStagger or 1))
         elseif powerType == 4 and trigger.unit == 'player' then
           table.insert(ret, ([[
@@ -3835,37 +3847,54 @@ Private.event_prototypes = {
             end
 
             local power = UnitPower(unit, powerType)
-            local total = math.max(1, UnitPowerMax(unit, powerType))
+            local rawMax = UnitPowerMax(unit, powerType)
+            local ok, t = pcall(function() return math.max(1, rawMax) end)
+            local total = ok and t or rawMax
           ]]))
         else
           table.insert(ret, [[
             local power = UnitPower(unit, powerType)
-            local total = math.max(1, UnitPowerMax(unit, powerType))
+            local rawMax = UnitPowerMax(unit, powerType)
+            local ok, t = pcall(function() return math.max(1, rawMax) end)
+            local total = ok and t or rawMax
           ]])
         end
       elseif WeakAuras.IsMists() and powerType == 99 then
         table.insert(ret, ([[
           local power = UnitStagger(unit) or 0
           local scaleStagger = %s
-          local total = math.max(1, UnitHealthMax(unit) * scaleStagger)
+          local rawMax = UnitHealthMax(unit)
+          local ok, t = pcall(function() return math.max(1, rawMax * scaleStagger) end)
+          local total = ok and t or rawMax
         ]]):format(trigger.use_scaleStagger and trigger.scaleStagger or 1))
       elseif WeakAuras.IsMists() and (powerType == 14 or powerType == 7) then
         table.insert(ret, [[
           local displayMod = UnitPowerDisplayMod(powerType)
-          local power = UnitPower(unit, powerType, true) / displayMod
-          local total = math.max(1, UnitPowerMax(unit, powerType, true)) / displayMod
+          local power, total
+          do
+            local rawPower = UnitPower(unit, powerType, true)
+            local rawMax = UnitPowerMax(unit, powerType, true)
+            local ok1, p = pcall(function() return rawPower / displayMod end)
+            local ok2, t = pcall(function() return math.max(1, rawMax / displayMod) end)
+            power = ok1 and p or rawPower
+            total = ok2 and t or rawMax
+          end
         ]])
       else
         -- Combo Points
         if powerType == 4 then
           table.insert(ret, [[
             local power = GetComboPoints(unit, unit .. '-target')
-            local total = math.max(1, UnitPowerMax(unit, Enum.PowerType.ComboPoints))
+            local rawMax = UnitPowerMax(unit, Enum.PowerType.ComboPoints)
+            local ok, t = pcall(function() return math.max(1, rawMax) end)
+            local total = ok and t or rawMax
           ]])
         else
           table.insert(ret, [[
             local power = UnitPower(unit, powerType)
-            local total = math.max(1, UnitPowerMax(unit, powerType))
+            local rawMax = UnitPowerMax(unit, powerType)
+            local ok, t = pcall(function() return math.max(1, rawMax) end)
+            local total = ok and t or rawMax
           ]])
         end
       end
@@ -4025,7 +4054,7 @@ Private.event_prototypes = {
         name = "percentpower",
         display = L["Power (%)"],
         type = "number",
-        init = "total ~= 0 and (value / total) * 100 or nil",
+        init = "(function() local ok, r = pcall(function() return total ~= 0 and (value / total) * 100 or nil end); return ok and r or nil end)()",
         store = true,
         conditionType = "number",
         multiEntry = {
@@ -4038,7 +4067,7 @@ Private.event_prototypes = {
         name = "deficit",
         display = L["Power Deficit"],
         type = "number",
-        init = "total - value",
+        init = "(function() local ok, r = pcall(function() return total - value end); return ok and r or 0 end)()",
         store = true,
         conditionType = "number",
         multiEntry = {

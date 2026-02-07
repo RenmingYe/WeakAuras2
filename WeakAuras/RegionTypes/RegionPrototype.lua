@@ -425,15 +425,16 @@ local function UpdateProgressFromState(self, minMaxConfig, state, progressSource
     end
   elseif progressType == "number" then
     local value = state[property]
-    if type(value) ~= "number" then value = 0 end
+    if value == nil then value = 0 end
     local total = totalProperty and state[totalProperty]
-    if type(total) ~= "number" then total = 0 end
+    if total == nil then total = 0 end
     -- We don't care about inverse, modRate or paused
     local adjustMin
     if minMaxConfig.adjustedMin then
       adjustMin = minMaxConfig.adjustedMin
     elseif minMaxConfig.adjustedMinRelPercent then
-      adjustMin = minMaxConfig.adjustedMinRelPercent * total
+      local ok, r = pcall(function() return minMaxConfig.adjustedMinRelPercent * total end)
+      adjustMin = ok and r or 0
     else
       adjustMin = 0
     end
@@ -441,7 +442,8 @@ local function UpdateProgressFromState(self, minMaxConfig, state, progressSource
     if minMaxConfig.adjustedMax then
       max = minMaxConfig.adjustedMax
     elseif minMaxConfig.adjustedMaxRelPercent then
-      max = minMaxConfig.adjustedMaxRelPercent * total
+      local ok, r = pcall(function() return minMaxConfig.adjustedMaxRelPercent * total end)
+      max = ok and r or total
     else
       max = total
     end
@@ -450,8 +452,10 @@ local function UpdateProgressFromState(self, minMaxConfig, state, progressSource
     -- the animation code/sub elements needs those values in some convenient place
     self.minProgress, self.maxProgress = adjustMin, max
     self.progressType = "static"
-    self.value = value - adjustMin
-    self.total = max - adjustMin
+    local ok1, v = pcall(function() return value - adjustMin end)
+    self.value = ok1 and v or value
+    local ok2, t = pcall(function() return max - adjustMin end)
+    self.total = ok2 and t or max
     if self.UpdateValue then
       self:UpdateValue()
     end

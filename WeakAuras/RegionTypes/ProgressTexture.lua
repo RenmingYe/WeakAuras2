@@ -612,13 +612,21 @@ local funcs = {
   end,
   UpdateValue = function(self)
     local progress = 1
-    if(self.total > 0) then
-      progress = self.value / self.total;
+    local ok, cmp = pcall(function() return self.total > 0 end)
+    if ok and cmp then
+      local ok2, p = pcall(function() return self.value / self.total end)
+      if ok2 then
+        progress = p
+      end
       if self.inverseDirection then
-        progress = 1 - progress;
+        local ok3, ip = pcall(function() return 1 - progress end)
+        if ok3 then
+          progress = ip
+        end
       end
     end
-    progress = progress > 0.0001 and progress or 0.0001;
+    local ok4, cmp2 = pcall(function() return progress > 0.0001 and progress or 0.0001 end)
+    progress = ok4 and cmp2 or 0.0001
     if self.useSmoothProgress then
       self.smoothProgress:SetSmoothedValue(progress);
     else
