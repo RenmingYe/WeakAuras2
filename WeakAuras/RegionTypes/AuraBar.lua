@@ -314,11 +314,15 @@ local barPrototype = {
   ["UpdateProgress"] = function(self)
     -- Limit values
     local value = self.value;
-    value = math.max(self.min, value);
-    value = math.min(self.max, value);
+    local ok1, v1 = pcall(function() return math.max(self.min, value) end)
+    value = ok1 and v1 or value
+    local ok2, v2 = pcall(function() return math.min(self.max, value) end)
+    value = ok2 and v2 or value
 
     -- Alignment variables
-    local progress = (value - self.min) / (self.max - self.min);
+    local progress
+    local ok3, p = pcall(function() return (value - self.min) / (self.max - self.min) end)
+    progress = ok3 and p or 1
 
     -- Create statusbar illusion
     if (self.horizontal) then
@@ -367,15 +371,18 @@ local barPrototype = {
         local extraTexture = self.extraTextures[index];
 
         local valueStart = self.additionalBarsMin
-        local valueWidth = self.additionalBarsMax - valueStart;
+        local ok_vw, valueWidth = pcall(function() return self.additionalBarsMax - valueStart end)
+        if not ok_vw then valueWidth = 0 end
 
         local startProgress = 0;
         local endProgress = 0;
 
         if (additionalBar.min and additionalBar.max) then
           if (valueWidth ~= 0) then
-            startProgress = (additionalBar.min - valueStart) / valueWidth;
-            endProgress = (additionalBar.max - valueStart) / valueWidth;
+            local ok_sp, sp = pcall(function() return (additionalBar.min - valueStart) / valueWidth end)
+            local ok_ep, ep = pcall(function() return (additionalBar.max - valueStart) / valueWidth end)
+            startProgress = ok_sp and sp or 0
+            endProgress = ok_ep and ep or 0
 
             if (self.additionalBarsInverse) then
               startProgress = 1 - startProgress;
@@ -485,12 +492,12 @@ local barPrototype = {
   -- Blizzard like SetMinMaxValues
   ["SetMinMaxValues"] = function(self, minVal, maxVal)
     local update = false;
-    if minVal and type(minVal) == "number" then
+    if minVal ~= nil then
       self.min = minVal;
       update = true;
     end
 
-    if maxVal and type(maxVal) == "number" then
+    if maxVal ~= nil then
       self.max = maxVal;
       update = true;
     end
@@ -507,7 +514,7 @@ local barPrototype = {
 
   -- Blizzard like SetValue
   ["SetValue"] = function(self, value)
-    if value and type(value) == "number" then
+    if value ~= nil then
       self.value = value;
       self:UpdateProgress();
       self:UpdateAdditionalBars();
